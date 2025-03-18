@@ -1,11 +1,19 @@
 package io.github.brenno_araujo25.personal_finances.security;
 
+import java.util.Base64;
 import java.util.Date;
+import java.util.Map;
 
 import javax.crypto.SecretKey;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+
+import com.auth0.jwt.JWT;
+import com.auth0.jwt.algorithms.Algorithm;
+import com.auth0.jwt.exceptions.JWTCreationException;
+import com.auth0.jwt.interfaces.Claim;
+import com.fasterxml.jackson.databind.JsonSerializable.Base;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -21,52 +29,59 @@ public class JwtUtil {
     @Value("${jwt.expiration}")
     private Long expiration;
 
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = Decoders.BASE64.decode(secret);
-        return Keys.hmacShaKeyFor(keyBytes);
-    }
-
     public String generateToken(String username) {
-        SecretKey key = getSigningKey();
-
-        return Jwts.builder()
-            .subject(username)
-            .issuedAt(new Date(System.currentTimeMillis()))
-            .expiration(new Date(System.currentTimeMillis() + expiration))
-            .signWith(key)
-            .compact();
+        try {
+            Base64.Encoder base64 = Base64.getEncoder();
+            byte[] encodedSecret = base64.encode(secret.getBytes());
+            Algorithm algorithm = Algorithm.HMAC256(encodedSecret);
+            String token = JWT.create()
+                .withSubject(username)
+                .withIssuedAt(new Date(System.currentTimeMillis()))
+                .withExpiresAt(new Date(System.currentTimeMillis() + expiration))
+                .sign(algorithm);
+            return token;
+        } catch (JWTCreationException e) {
+            throw new RuntimeException("Error creating token", e);
+        }
     }
  
     public boolean validateToken(String token, String username) {
-        Claims claims = getClaims(token);
-        String tokenUsername = claims.getSubject();
-        Date expirationDate = claims.getExpiration();
-        Date now = new Date(System.currentTimeMillis());
-
-        return tokenUsername.equals(username) && !expirationDate.before(now);
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            JWT.require(algorithm)
+                .withSubject(username)
+                .build()
+                .verify(token);
+            return true;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public String getUsernameFromToken(String token) {
-        Claims claims = getClaims(token);
-        return claims.getSubject();
+        Map<String, Claim> claims = getClaims(token);
+        return claims.get("sub").asString();
     }
 
     public boolean isTokenExpired(String token) {
-        Claims claims = getClaims(token);
-        Date expirationDate = claims.getExpiration();
+        Map<String, Claim> claims = getClaims(token);
+        Date expirationDate = claims.get("exp").asDate();
         Date now = new Date(System.currentTimeMillis());
 
         return expirationDate.before(now);
     }
 
-    private Claims getClaims(String token) {
-        SecretKey key = getSigningKey();
-
-        return Jwts.parser()
-            .verifyWith(key)
-            .build()
-            .parseSignedClaims(token)
-            .getPayload();
+    @SuppressWarnings("deprecated")
+    private Map<String, Claim> getClaims(String token) {
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            return JWT.require(algorithm)
+                .build()
+                .verify(token)
+                .getClaims();
+        } catch (Exception e) {
+            throw new RuntimeException("Error getting claims", e);
+        }
     }
 
 }

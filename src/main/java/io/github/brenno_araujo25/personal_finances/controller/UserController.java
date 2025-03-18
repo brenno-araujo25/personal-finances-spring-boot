@@ -1,4 +1,4 @@
-package io.github.brenno_araujo25.personal_finances;
+package io.github.brenno_araujo25.personal_finances.controller;
 
 import java.util.UUID;
 

@@ -26,7 +26,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     }
 
     public boolean validateToken(String token, String username) {
-        return jwtUtil.validateToken(token, username);
+        try {
+            String tokenUsername = jwtUtil.validateToken(token);
+            return username.equals(tokenUsername);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private String validateAuthorizationHeader(HttpServletRequest request) {
@@ -51,7 +56,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         String token = authHeader.substring(7);
-        String username = jwtUtil.getUsernameFromToken(token);
+        String username = jwtUtil.validateToken(token);
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(username);

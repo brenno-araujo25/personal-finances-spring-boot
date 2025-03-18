@@ -1,5 +1,6 @@
 package io.github.brenno_araujo25.personal_finances.security;
 
+import java.util.Base64;
 import java.util.Date;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +36,9 @@ public class JwtUtil {
 
     public String validateToken(String token) {
         try {
+            if (!isBase64Encoded(token)) {
+                throw new RuntimeException("Invalid token format");
+            }
             Algorithm algorithm = Algorithm.HMAC256(secret);
             return JWT.require(algorithm)
                     .withIssuer("Personal Finances")
@@ -43,6 +47,15 @@ public class JwtUtil {
                     .getSubject();
         } catch (JWTVerificationException e) {
             throw new RuntimeException("Invalid token", e);
+        }
+    }
+
+    private boolean isBase64Encoded(String token) {
+        try {
+            Base64.getDecoder().decode(token);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
         }
     }
 

@@ -16,17 +16,19 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
-    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, BCryptPasswordEncoder passwordEncoder, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.userMapper = userMapper;
     }
 
     public UserDTO getUserById(UUID id) {
         Optional<User> user = userRepository.findById(id);
 
         return user
-            .map(UserMapper.INSTANCE::toDTO)
+            .map(userMapper::toDTO)
             .orElseThrow(() -> new IllegalArgumentException("User not found."));
     }
 
@@ -35,7 +37,7 @@ public class UserService {
             throw new IllegalArgumentException("User already exists.");
         }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
-        return UserMapper.INSTANCE.toDTO(userRepository.save(user));
+        return userMapper.toDTO(userRepository.save(user));
     }
 
 }

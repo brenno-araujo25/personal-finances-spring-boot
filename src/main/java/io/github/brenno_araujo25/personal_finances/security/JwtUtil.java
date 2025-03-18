@@ -63,7 +63,7 @@ public class JwtUtil {
         SecretKey key = getSigningKey();
 
         return Jwts.parser()
-            .decryptWith(key)
+            .verifyWith(key)
             .build()
             .parseSignedClaims(token)
             .getPayload();

@@ -1,7 +1,9 @@
 package io.github.brenno_araujo25.personal_finances.service;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -9,9 +11,11 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import io.github.brenno_araujo25.personal_finances.dto.SummaryResponse;
 import io.github.brenno_araujo25.personal_finances.dto.TransactionRequest;
 import io.github.brenno_araujo25.personal_finances.dto.TransactionResponse;
 import io.github.brenno_araujo25.personal_finances.entity.Transaction;
+import io.github.brenno_araujo25.personal_finances.entity.TransactionType;
 import io.github.brenno_araujo25.personal_finances.entity.User;
 import io.github.brenno_araujo25.personal_finances.exception.InvalidTransactionException;
 import io.github.brenno_araujo25.personal_finances.exception.TransactionNotFoundException;
@@ -88,6 +92,43 @@ public class TransactionService {
         Transaction transaction = transactionRepository.findById(id)
             .orElseThrow(() -> new TransactionNotFoundException("Transaction not found"));
         transactionRepository.delete(transaction);
+    }
+
+    public SummaryResponse getFinancialSummary() {
+        User user = getAuthenticatedUser();
+        List<Transaction> transactions = transactionRepository.findByUser(user);
+
+        BigDecimal totalIncome = BigDecimal.ZERO;
+        BigDecimal totalExpense = BigDecimal.ZERO;
+        Map<String, BigDecimal> incomesByCategory = new HashMap<>();
+        Map<String, BigDecimal> expensesByCategory = new HashMap<>();
+
+        for (Transaction transaction : transactions) {
+            if (transaction.getType().equals(TransactionType.INCOME)) {
+                totalIncome = totalIncome.add(transaction.getAmount());
+                incomesByCategory.merge(
+                    transaction.getCategory(),
+                    transaction.getAmount(),
+                    BigDecimal::add
+                );
+            } else {
+                totalExpense = totalExpense.add(transaction.getAmount());
+                expensesByCategory.merge(
+                    transaction.getCategory(),
+                    transaction.getAmount(),
+                    BigDecimal::add
+                );
+            }
+        }
+
+        SummaryResponse summary = new SummaryResponse();
+        summary.setTotalIncome(totalIncome);
+        summary.setTotalExpense(totalExpense);
+        summary.setTotalBalance(totalIncome.subtract(totalExpense));
+        summary.setIncomesByCategory(incomesByCategory);
+        summary.setExpensesByCategory(expensesByCategory);
+
+        return summary;
     }
 
     private User getAuthenticatedUser() {

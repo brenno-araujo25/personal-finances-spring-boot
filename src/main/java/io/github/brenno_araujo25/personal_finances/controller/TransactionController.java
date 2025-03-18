@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.github.brenno_araujo25.personal_finances.dto.SummaryResponse;
 import io.github.brenno_araujo25.personal_finances.dto.TransactionRequest;
 import io.github.brenno_araujo25.personal_finances.dto.TransactionResponse;
 import io.github.brenno_araujo25.personal_finances.service.TransactionService;
@@ -69,6 +70,12 @@ public class TransactionController {
     ) {
         transactionService.deleteTransaction(transactionId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<SummaryResponse> getSummary() {
+        SummaryResponse summary = transactionService.getFinancialSummary();
+        return ResponseEntity.ok(summary);
     }
 
 }

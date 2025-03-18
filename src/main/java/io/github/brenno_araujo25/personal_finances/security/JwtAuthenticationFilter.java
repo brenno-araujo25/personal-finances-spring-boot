@@ -49,13 +49,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         HttpServletResponse response,
         FilterChain filterChain
     ) throws ServletException, IOException {
-        String authHeader = validateAuthorizationHeader(request);
-        if (authHeader == null) {
+        String token = validateAuthorizationHeader(request);
+        if (token == null) {
             filterChain.doFilter(request, response);
             return;
         }
 
-        String token = authHeader.substring(7);
         String username = jwtUtil.validateToken(token);
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
